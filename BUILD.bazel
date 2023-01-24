@@ -1,0 +1,69 @@
+package(default_visibility = ["//visibility:private"])
+
+# Remember to build with env var BAZEL_CXXOPTS="-std=c++17"
+cc_binary(
+  name = "small_directpath_example",
+  srcs = ["small_directpath_example.cc"],
+  deps = [
+     "@google_cloud_cpp//:experimental-storage-grpc",
+  ]
+)
+
+cc_library(
+  name = "metrics_tracker",
+  srcs = ["metrics_tracker.cc"],
+  hdrs = ["metrics_tracker.hpp"],
+  deps = [
+    "@streaming-percentiles//cpp:cpp",
+  ]
+)
+
+cc_library(
+  name = "perftest_config",
+  srcs = ["perftest_config.cc"],
+  hdrs = ["perftest_config.hpp"],
+  deps = [
+    ":universes",
+        "@com_google_absl//absl/flags:flag",
+         "@com_google_absl//absl/strings",
+  ]
+)
+
+cc_library(
+  name = "universes",
+  hdrs = ["universes.hpp"]
+)
+
+cc_library(
+  name = "prometheus_reporter",
+  srcs = ["prometheus_reporter.cc"],
+  hdrs = ["prometheus_reporter.hpp"],
+  deps = [
+    "@prometheus_cpp//push",
+  ]
+)
+
+cc_library(
+  name = "gcs_client",
+  srcs = ["gcs_client.cc"],
+  hdrs = ["gcs_client.hpp"],
+  deps = [
+    ":universes",
+    "@google_cloud_cpp//:experimental-storage-grpc",
+  ]
+)
+
+cc_binary(
+  name = "gcs_perf_prober",
+  srcs = ["gcs_perf_prober.cc"],
+  deps = [
+    ":metrics_tracker",
+    "@google_cloud_cpp//:experimental-storage-grpc",
+    ":prometheus_reporter",
+    ":perftest_config",
+    ":gcs_client",
+    "@com_google_absl//absl/flags:flag",
+    "@com_google_absl//absl/flags:parse",
+  ]
+)
+
