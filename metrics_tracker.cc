@@ -5,7 +5,6 @@
 #include <iostream>
 #include <algorithm>
 
-
 MetricsTracker::MetricsTracker() : success_latency_tracker_(quantiles_.begin(), quantiles_.end())
 {
 }
@@ -22,10 +21,14 @@ void MetricsTracker::ReportError(double latency)
     request_count_ += 1;
 }
 
-double MetricsTracker::Quantile(double p) {
-    for( stmpct::targeted_quantile q : quantiles_ ) {
-        if (q.phi == p) {
-            return success_latency_tracker_.quantile(p);;
+double MetricsTracker::Quantile(double p)
+{
+    for (stmpct::targeted_quantile q : quantiles_)
+    {
+        if (q.phi == p)
+        {
+            return success_latency_tracker_.quantile(p);
+            ;
         }
     }
 

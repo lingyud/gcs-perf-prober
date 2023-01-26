@@ -43,18 +43,24 @@ git_repository(
     branch = "main",
 )
 
-# For pushing metrics to Prometheus
-# We're using a BrandonY fork because cloud_storage_cpp declares a repository
-# named "com_github_curl_curl" for curl, but prometheus-cpp declares a repository
-# named "com_github_curl" for curl, so we end up linking in two copies of curl,
-# which doesn't work. So my fork renames it to the same one the GCS C++ client uses.
-#load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
-git_repository(
-    name = "prometheus_cpp",
-    remote = "https://github.com/BrandonY/prometheus-cpp.git",
-    branch = "master",
+# The cloud storage C++ repo depends on a cURL target named "com_github_curl_curl".
+# The prometheus-cpp repo depends on a separate cURL target named "com_github_curl"
+# This declares "@com_github_curl" as an alias of "@com_github_curl_curl" in order
+# to trick prometheus-cpp into not importing a second verison of curl.
+new_local_repository(
+  name = "com_github_curl",
+  path = "fake_curl",
+  build_file = "fake_curl/BUILD.com_github_curl",
 )
-load("@prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
+
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+http_archive(
+    name = "com_github_jupp0r_prometheus_cpp",
+    strip_prefix = "prometheus-cpp-master",
+    urls = ["https://github.com/jupp0r/prometheus-cpp/archive/master.zip"],
+)
+load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
 prometheus_cpp_repositories()
 
 # For flags

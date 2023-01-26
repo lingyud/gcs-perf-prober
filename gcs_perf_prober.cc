@@ -1,7 +1,3 @@
-#include <stmpct/ckms_tq.hpp>
-
-#include <chrono>
-using namespace std::chrono;
 
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/grpc_plugin.h"
@@ -16,12 +12,15 @@ using namespace std::chrono;
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 
-#include "metrics_tracker.hpp"
 #include "prometheus_reporter.hpp"
 #include "perftest_config.hpp"
 #include "gcs_client.hpp"
+#include "test_runner.hpp"
 
 ABSL_FLAG(bool, push_to_prometheus, false, "Whether to push results");
+ABSL_FLAG(std::string, prometheus_host, "34.173.12.152", "Prometheus Push Host");
+ABSL_FLAG(std::string, prometheus_port, "9091", "Prometheus Push Port");
+ABSL_FLAG(bool, run_once, false, "Whether to exit after first successful run, for testing, etc");
 
 namespace gc = ::google::cloud;
 namespace gcs = gc::storage;
@@ -32,51 +31,24 @@ int main(int argc, char **argv)
     absl::ParseCommandLine(argc, argv);
 
     std::optional<PerftestConfig> config = PerftestConfig::LoadConfig();
-    if (!config) {
+    if (!config)
+    {
         return 1;
     }
 
-    std::unique_ptr<GcsClient> client;
-    switch (config->clientAPI())
+    PrometheusReporter prometheus_reporter(absl::GetFlag(FLAGS_prometheus_host), absl::GetFlag(FLAGS_prometheus_port), config->scenario(), config->universe_str(), GcsClient::GRPCVersion(), GcsClient::GCSClientVersion());
+
+    do
     {
-    case GRPC_DIRECTPATH:
-        client = GcsClient::MakeDirectpathClient(config->universe(), config->bucket());
-        break;
-    case JSON:
-        client = GcsClient::MakeJSONClient(config->universe(), config->bucket());
-    }
+        TestRunner testRunner(*config);
+        testRunner.Run(&prometheus_reporter);
 
-    MetricsTracker metrics_tracker;
-    PrometheusReporter prometheus_reporter("127.0.0.1", "9091",config->scenario(), client->GRPCVersion(), client->GCSClientVersion());
-
-
-    for (int i = 0; i < 100; ++i)
-    {
-        auto start = high_resolution_clock::now();
-        bool success = client->ReadObject(config->object());
-        auto stop = high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> duration = stop - start;
-
-        if (success)
+        prometheus_reporter.Summarize();
+        if (absl::GetFlag(FLAGS_push_to_prometheus))
         {
-            metrics_tracker.ReportSuccess(duration.count());
-            prometheus_reporter.ReportSuccessfulCalls(1);
-            prometheus_reporter.ReportCalls(1);
+            prometheus_reporter.Push();
         }
-        else
-        {
-            metrics_tracker.ReportError(duration.count());
-            prometheus_reporter.ReportCalls(1);
-        }
+    } while (!absl::GetFlag(FLAGS_run_once));
 
-        if (i % 25 == 0)
-            std::cout << "Read " << i << " objects, " << duration.count() << "ms." << std::endl;
-    }
-
-    prometheus_reporter.RecordSuccessP50(metrics_tracker.Quantile(.5));
-
-    if (absl::GetFlag(FLAGS_push_to_prometheus)) {
-        prometheus_reporter.Push();
-    }
     return 0;
 }

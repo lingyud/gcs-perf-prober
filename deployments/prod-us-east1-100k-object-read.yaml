@@ -1,0 +1,56 @@
+---
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: "prod-us-east1-100k-object-read-config-dvfx"
+  namespace: "default"
+  labels:
+    app: "prod-us-east1-100k-object-read"
+data:
+  UNIVERSE: "prod"
+  SCENARIO: "100k-object-read"
+  REGION: "us-east1"
+  OPERATION: "ReadObject"
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: "prod-us-east1-100k-object-read"
+  namespace: "default"
+  labels:
+    app: "prod-us-east1-100k-object-read"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "prod-us-east1-100k-object-read"
+  template:
+    metadata:
+      labels:
+        app: "prod-us-east1-100k-object-read"
+    spec:
+      containers:
+      - name: "gcs-perf-prober"
+        image: "us-central1-docker.pkg.dev/gcs-grpc-team-testing/my-repository/gcs-perf-prober:latest"
+        #image: "us-central1-docker.pkg.dev/gcs-grpc-team-testing/my-repository/perf-gauge@sha256:811dbba5860dfe58330be0154d85a7c57a905396724c5ae537f0f224f7151858"
+        env:
+        - name: "UNIVERSE"
+          valueFrom:
+            configMapKeyRef:
+              key: "UNIVERSE"
+              name: "prod-us-east1-100k-object-read-config-dvfx"
+        - name: "SCENARIO"
+          valueFrom:
+            configMapKeyRef:
+              key: "SCENARIO"
+              name: "prod-us-east1-100k-object-read-config-dvfx"
+        - name: "REGION"
+          valueFrom:
+            configMapKeyRef:
+              key: "REGION"
+              name: "prod-us-east1-100k-object-read-config-dvfx"
+        - name: "OPERATION"
+          valueFrom:
+            configMapKeyRef:
+              key: "OPERATION"
+              name: "prod-us-east1-100k-object-read-config-dvfx"

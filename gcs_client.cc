@@ -4,6 +4,7 @@
 #include "google/cloud/storage/grpc_plugin.h"
 #include <grpc++/grpc++.h>
 
+#include <algorithm>
 
 namespace gc = ::google::cloud;
 namespace gcs = gc::storage;
@@ -25,6 +26,17 @@ std::map<Universe, std::string> json_version_map = {
     {PROD, "v1"},
     {PREPROD, "v1_preprod"},
     {HP_PREPROD, "v1_preprod"}};
+
+GcsClient::GcsClient(google::cloud::storage::Client client, std::string bucket) : client_(client), bucket_(bucket), io_buffer_(262144)
+{
+    random_write_buffer_len_ = 2097152;
+    // Probably faster/better to read from /dev/urandom?
+    random_write_buffer_ = new char[random_write_buffer_len_];
+    for (unsigned long i = 0; i < random_write_buffer_len_; i++)
+    {
+        random_write_buffer_[i] = (char)rand();
+    }
+};
 
 std::unique_ptr<GcsClient> GcsClient::MakeDirectpathClient(Universe universe, std::string bucket)
 {
@@ -65,17 +77,55 @@ bool GcsClient::ReadObject(std::string object)
         }
     } while (stream);
     stream.Close();
+    if (stream.bad())
+    {
+        std::cerr << "Error closing read object: " << stream.status() << "\n";
+        return false;
+    }
 
     return true;
 }
 
-void GcsClient::WriteObject(std::string object) {}
+bool GcsClient::ResumablyWriteObject(std::string object, unsigned long bytes)
+{
+    gcs::ObjectWriteStream stream = client_.WriteObject(bucket_, object, gcs::UseResumableUploadSession(gcs::NewResumableUploadSession()));
+    if (stream.bad())
+    {
+        std::cerr << "Error starting resumable uploads: " << stream.metadata().status() << "\n";
+        return false;
+    }
+
+    unsigned long written = 0;
+    while (written < bytes)
+    {
+        unsigned long to_write = std::min(random_write_buffer_len_, bytes - written);
+        stream.write(random_write_buffer_, to_write);
+        written += to_write;
+
+        if (stream.bad())
+        {
+            std::cerr << "Error writing to the stream: " << stream.metadata().status() << "\n";
+            return false;
+        }
+    }
+    stream.Close();
+    if (stream.bad())
+    {
+        std::cerr << "Error Finishing resumable uploads: " << stream.metadata().status() << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool GcsClient::OneShotWriteObject(std::string object, unsigned long bytes) { return false; }
 void GcsClient::StartResumableWrite(std::string object) {}
 
-std::string GcsClient::GRPCVersion() {
+std::string GcsClient::GRPCVersion()
+{
     return grpc::Version();
 }
 
-std::string GcsClient::GCSClientVersion() {
+std::string GcsClient::GCSClientVersion()
+{
     return gc::version_string();
 }

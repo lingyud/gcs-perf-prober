@@ -39,7 +39,21 @@ cc_library(
   srcs = ["prometheus_reporter.cc"],
   hdrs = ["prometheus_reporter.hpp"],
   deps = [
-    "@prometheus_cpp//push",
+    "@com_github_jupp0r_prometheus_cpp//push",
+  ]
+)
+
+cc_library(
+  name = "test_runner",
+  srcs = ["test_runner.cc"],
+  hdrs = ["test_runner.hpp"],
+  deps = [
+    ":gcs_client",
+    ":metrics_tracker",
+    ":perftest_config",
+    ":prometheus_reporter",
+    "@com_google_absl//absl/time",
+    "@com_google_absl//absl/flags:flag",
   ]
 )
 
@@ -62,6 +76,7 @@ cc_binary(
     ":prometheus_reporter",
     ":perftest_config",
     ":gcs_client",
+    ":test_runner",
     "@com_google_absl//absl/flags:flag",
     "@com_google_absl//absl/flags:parse",
   ]

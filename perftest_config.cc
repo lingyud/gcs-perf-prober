@@ -14,6 +14,8 @@ ABSL_FLAG(std::optional<std::string>, api, std::nullopt, "grpc, grpc-no-directpa
 ABSL_FLAG(std::optional<std::string>, operation, std::nullopt, "ReadObject, WriteObject, etc");
 ABSL_FLAG(std::optional<std::string>, object_name, std::nullopt, "Name of object to read/write");
 
+ABSL_FLAG(std::optional<long>, write_length, std::nullopt, "For write operations, object size");
+
 std::optional<PerftestConfig> PerftestConfig::LoadConfig()
 {
     if (!absl::GetFlag(FLAGS_universe).has_value())
@@ -86,10 +88,29 @@ std::optional<PerftestConfig> PerftestConfig::LoadConfig()
     {
         operation = READ;
     }
+    else if (absl::GetFlag(FLAGS_operation) == "OneShotWriteObject")
+    {
+        operation = ONESHOT_WRITE;
+    }
+    else if (absl::GetFlag(FLAGS_operation) == "ResumableWriteObject")
+    {
+        operation = RESUMABLE_WRITE;
+    }
     else
     {
         std::cerr << "You must set the 'operation' flag to a known operation" << std::endl;
         return std::nullopt;
+    }
+
+    long write_length = 0;
+    if (operation == ONESHOT_WRITE || operation == RESUMABLE_WRITE)
+    {
+        if (!absl::GetFlag(FLAGS_write_length).has_value())
+        {
+            std::cerr << "You must set the a 'write_length' in bytes for write calls" << std::endl;
+            return std::nullopt;
+        }
+        write_length = absl::GetFlag(FLAGS_write_length).value();
     }
 
     std::string scenario = *absl::GetFlag(FLAGS_scenario);
@@ -98,5 +119,14 @@ std::optional<PerftestConfig> PerftestConfig::LoadConfig()
     std::string object = *absl::GetFlag(FLAGS_object_name);
 
     return std::make_optional<PerftestConfig>({scenario, region,
-                                               universe, api, operation, bucket, object});
+                                               universe, api, operation, bucket, object, write_length});
+}
+
+std::string PerftestConfig::universe_str() {
+    switch(universe_) {
+        case PROD: return "prod";
+        case PREPROD: return "preprod";
+        case HP_PREPROD: return "hp-preprod";
+    }
+    return nullptr;
 }
