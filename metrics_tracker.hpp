@@ -2,6 +2,7 @@
 #define metrics_tracker_hpp__
 
 #include <stmpct/ckms_tq.hpp>
+#include <limits>
 
 class MetricsTracker
 {

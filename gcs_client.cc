@@ -27,7 +27,7 @@ std::map<Universe, std::string> json_version_map = {
     {PREPROD, "v1_preprod"},
     {HP_PREPROD, "v1_preprod"}};
 
-GcsClient::GcsClient(google::cloud::storage::Client client, std::string bucket) : client_(client), bucket_(bucket), io_buffer_(262144)
+GcsClient::GcsClient(google::cloud::storage::Client client, std::string bucket) : client_(client), bucket_(bucket), io_buffer_(104857600)
 {
     random_write_buffer_len_ = 2097152;
     // Probably faster/better to read from /dev/urandom?
@@ -117,7 +117,16 @@ bool GcsClient::ResumablyWriteObject(std::string object, unsigned long bytes)
     return true;
 }
 
-bool GcsClient::OneShotWriteObject(std::string object, unsigned long bytes) { return false; }
+bool GcsClient::OneShotWriteObject(std::string object, unsigned long bytes) 
+{ 
+    gc::StatusOr<gcs::ObjectMetadata> insertResult = client_.InsertObject(bucket_, object, random_write_buffer_);
+    if (!insertResult.ok())
+    {
+        std::cerr << "Error doing a non-resumable uploads: " << insertResult.status() << "\n";
+        return false;
+    }
+    return true;
+}
 void GcsClient::StartResumableWrite(std::string object) {}
 
 std::string GcsClient::GRPCVersion()
