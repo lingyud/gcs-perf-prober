@@ -27,9 +27,9 @@ std::map<Universe, std::string> json_version_map = {
     {PREPROD, "v1_preprod"},
     {HP_PREPROD, "v1_preprod"}};
 
-GcsClient::GcsClient(google::cloud::storage::Client client, std::string bucket) : client_(client), bucket_(bucket), io_buffer_(262144)
+GcsClient::GcsClient(google::cloud::storage::Client client, std::string bucket) : client_(client), bucket_(bucket), io_buffer_(104857600)
 {
-    random_write_buffer_len_ = 2097152;
+    random_write_buffer_len_ = 104857600;
     // Probably faster/better to read from /dev/urandom?
     random_write_buffer_ = new char[random_write_buffer_len_];
     for (unsigned long i = 0; i < random_write_buffer_len_; i++)
