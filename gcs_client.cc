@@ -94,7 +94,7 @@ bool GcsClient::ResumablyWriteObject(std::string object, unsigned long bytes)
         std::cerr << "Error starting resumable uploads: " << stream.metadata().status() << "\n";
         return false;
     }
-    std::cerr << "ResumablyWriteObject write buffer len: " << random_write_buffer_len_;
+    //std::cerr << "ResumablyWriteObject write buffer len: " << random_write_buffer_len_;
     unsigned long written = 0;
     while (written < bytes)
     {
@@ -119,8 +119,10 @@ bool GcsClient::ResumablyWriteObject(std::string object, unsigned long bytes)
 
 bool GcsClient::OneShotWriteObject(std::string object, unsigned long bytes) 
 { 
-    std::cerr << "OneShotWriteObject write buffer len: " << random_write_buffer_len_;
-    gc::StatusOr<gcs::ObjectMetadata> insertResult = client_.InsertObject(bucket_, object, random_write_buffer_);
+    std::string str;
+    str.assign(random_write_buffer_, random_write_buffer_ + bytes);
+    //std::cerr << "OneShotWriteObject write buffer len: " << random_write_buffer_len_;
+    gc::StatusOr<gcs::ObjectMetadata> insertResult = client_.InsertObject(bucket_, object, str);
     if (!insertResult.ok())
     {
         std::cerr << "Error doing a non-resumable uploads: " << insertResult.status() << "\n";
