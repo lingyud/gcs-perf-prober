@@ -121,7 +121,7 @@ bool GcsClient::OneShotWriteObject(std::string object, unsigned long bytes)
 { 
     std::string str;
     str.assign(random_write_buffer_, random_write_buffer_ + bytes);
-    std::cerr << "OneShotWriteObject write buffer len: " << str.len();
+    std::cerr << "OneShotWriteObject write buffer len: " << str.length();
     gc::StatusOr<gcs::ObjectMetadata> insertResult = client_.InsertObject(bucket_, object, str);
     if (!insertResult.ok())
     {
