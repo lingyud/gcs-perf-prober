@@ -65,10 +65,12 @@ void TestRunner::Run(PrometheusReporter *reporter)
 
         auto stop = high_resolution_clock::now();
         std::chrono::duration<double, std::milli> duration = stop - start;
+        std::cerr << "duration: " << duration;
 
         if (success)
         {
             success_count++;
+            metrics_tracker.ReportSuccess(duration);
         }
         call_count++;
     }
